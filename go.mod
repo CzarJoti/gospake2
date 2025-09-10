@@ -1,0 +1,5 @@
+module github.com/ValiantChip/GoSpake2
+
+go 1.24.6
+
+require filippo.io/edwards25519 v1.1.0
