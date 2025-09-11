@@ -2,6 +2,7 @@ package gospake2
 
 import (
 	"crypto/rand"
+	"errors"
 	"slices"
 	"testing"
 )
@@ -56,14 +57,24 @@ func TestBasic(t *testing.T) {
 
 			kv := slices.Equal(k, k2)
 
-			av, err := alice.Verify(cB)
+			var av bool
+			err = alice.Verify(cB)
 			if err != nil {
-				t.Fatal(err)
+				if !errors.Is(err, ErrVerificationFailed) {
+					t.Fatal(err)
+				}
+			} else {
+				av = true
 			}
 
-			bv, err := bob.Verify(cA)
+			var bv bool
+			err = bob.Verify(cA)
 			if err != nil {
-				t.Fatal(err)
+				if !errors.Is(err, ErrVerificationFailed) {
+					t.Fatal(err)
+				}
+			} else {
+				bv = true
 			}
 
 			if test.valid {

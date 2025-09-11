@@ -13,6 +13,7 @@ var ErrAlreadyStarted = errors.New("instance has already been started")
 var ErrNotStarted = errors.New("instance has not been started")
 var ErrAlreadyFinished = errors.New("instance has already been finished")
 var ErrNotFinished = errors.New("instance has not been finished")
+var ErrVerificationFailed = errors.New("verification failed")
 
 type spake2Symetric struct {
 	A        string
@@ -92,12 +93,15 @@ func (s *Spake2A) Finish(msg []byte) (key, cmsg []byte, err error) {
 	return
 }
 
-func (s *Spake2A) Verify(msg []byte) (bool, error) {
+func (s *Spake2A) Verify(msg []byte) error {
 	if !s.finished {
-		return false, ErrNotFinished
+		return ErrNotFinished
 	}
 	b := hmac.Equal(s.cB, msg)
-	return b, nil
+	if !b {
+		return ErrVerificationFailed
+	}
+	return nil
 }
 
 // Represents B in the Spake2 protocol
@@ -176,10 +180,13 @@ func (s *Spake2B) Finish(msg []byte) (key, cmsg []byte, err error) {
 	return
 }
 
-func (s *Spake2B) Verify(msg []byte) (bool, error) {
+func (s *Spake2B) Verify(msg []byte) error {
 	if !s.finished {
-		return false, ErrNotFinished
+		return ErrNotFinished
 	}
 	b := hmac.Equal(s.cA, msg)
-	return b, nil
+	if !b {
+		return ErrVerificationFailed
+	}
+	return nil
 }
