@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/hkdf"
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/binary"
@@ -96,9 +95,9 @@ func GenerateSecrets(A, B string, pA, pB, K *edwards25519.Point, w *edwards25519
 	return
 }
 
-func RandomScalar() *edwards25519.Scalar {
+func RandomScalar(r io.Reader) *edwards25519.Scalar {
 	b := make([]byte, 64)
-	rand.Read(b)
+	r.Read(b)
 	s, _ := edwards25519.NewScalar().SetUniformBytes(b)
 	return s
 }
