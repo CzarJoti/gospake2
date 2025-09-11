@@ -9,11 +9,13 @@ import (
 	"github.com/ValiantChip/GoSpake2/lib/protocol"
 )
 
-var ErrAlreadyStarted = errors.New("instance has already been started")
-var ErrNotStarted = errors.New("instance has not been started")
-var ErrAlreadyFinished = errors.New("instance has already been finished")
-var ErrNotFinished = errors.New("instance has not been finished")
-var ErrVerificationFailed = errors.New("verification failed")
+var (
+	ErrAlreadyStarted     = errors.New("instance has already been started")
+	ErrNotStarted         = errors.New("instance has not been started")
+	ErrAlreadyFinished    = errors.New("instance has already been finished")
+	ErrNotFinished        = errors.New("instance has not been finished")
+	ErrVerificationFailed = errors.New("verification failed")
+)
 
 type spake2Symetric struct {
 	A        string
