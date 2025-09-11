@@ -40,7 +40,6 @@ type Spake2A struct {
 // Creates a new instance of A
 // pw is a slice of bytes known to both A and B
 // A and B are strings that are shared between A and B
-// is a
 func NewA(pw []byte, A, B string, rand io.Reader) *Spake2A {
 	return &Spake2A{
 		spake2Symetric: newSpake2(pw, A, B, rand),
@@ -95,12 +94,15 @@ func (s *Spake2A) Finish(msg []byte) (key, cmsg []byte, err error) {
 	return
 }
 
+// Verifies the confirmation message from A
+// If the verification fails ErrVerificationFailed will be returned
+// If the instance has not been finished ErrNotFinished will be returned
 func (s *Spake2A) Verify(msg []byte) error {
 	if !s.finished {
 		return ErrNotFinished
 	}
-	b := hmac.Equal(s.cB, msg)
-	if !b {
+
+	if b := hmac.Equal(s.cB, msg); !b {
 		return ErrVerificationFailed
 	}
 	return nil
@@ -182,12 +184,15 @@ func (s *Spake2B) Finish(msg []byte) (key, cmsg []byte, err error) {
 	return
 }
 
+// Verifies the confirmation message from A
+// If the verification fails ErrVerificationFailed will be returned
+// If the instance has not been finished ErrNotFinished will be returned
 func (s *Spake2B) Verify(msg []byte) error {
 	if !s.finished {
 		return ErrNotFinished
 	}
-	b := hmac.Equal(s.cA, msg)
-	if !b {
+
+	if b := hmac.Equal(s.cA, msg); !b {
 		return ErrVerificationFailed
 	}
 	return nil
