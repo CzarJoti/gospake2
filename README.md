@@ -1,19 +1,19 @@
-#gospake2
+# gospake2
 
 An implementation of the Spake2 password-authenticated key exchange protocol as described in [RFC 9382](https://www.rfc-editor.org/rfc/rfc9382) in Go. 
 
-##Overview
+## Overview
 
 Spake2 is a secure password-authenticated key exchange protocol that allows two parties that share a weak password to derive a strong shared key without disclosing the password. 
 
-##Implementation
+## Implementation
 gospake2 provides a default ciphersuite for use with the Spake2 protocol as the variable DEFAULT_SUITE
 It uses the edwards25519 curve as its group, SHA256 as its hash function, SHA512 to hash the provided password, HKDF for its key derivation function, and HMAC for its Message Authentication Code algorithm
 
-###Note:
+### Note:
 SHA512 as the password hash function provided by the default ciphersuite is NOT MEMORY-HARD and is NOT the recomended hash function for any secure application. It is included in DEFAULT_SUITE due to its speed for low-security applications
 
-##Usage
+## Usage
 
 First, both sides are initialized with the same password and messages containing pA and pB are created
 
