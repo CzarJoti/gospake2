@@ -30,6 +30,7 @@ var DEFAULT_SUITE = CipherSuite[*ed25519.Scalar, *ed25519.Point, *ed25519.Curve]
 	Mac:          hmac.New,
 }
 
+// Represents an object that can handle the Spake2 protocol
 type Spake2Handler interface {
 	Start() ([]byte, error)
 	Finish(msg []byte) ([]byte, []byte, error)
