@@ -23,8 +23,8 @@ var tests = []SpakeTest{
 	},
 	{
 		name:      "invalid password",
-		passwordA: "password",
-		passwordB: "password2",
+		passwordA: "passwodsfsdfsdrd",
+		passwordB: "passwordssdfsdd2",
 		valid:     false,
 	},
 }
@@ -32,8 +32,14 @@ var tests = []SpakeTest{
 func TestBasic(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			alice := NewA([]byte(test.passwordA), "A", "B", rand.Reader)
-			bob := NewB([]byte(test.passwordB), "A", "B", rand.Reader)
+			alice, err := NewA([]byte(test.passwordA), "A", "B", rand.Reader, DEFAULT_SUITE)
+			if err != nil {
+				t.Fatal(err)
+			}
+			bob, err := NewB([]byte(test.passwordB), "A", "B", rand.Reader, DEFAULT_SUITE)
+			if err != nil {
+				t.Fatal(err)
+			}
 
 			pA, err := alice.Start()
 			if err != nil {

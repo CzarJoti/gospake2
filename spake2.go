@@ -1,12 +1,15 @@
 package gospake2
 
 import (
+	"crypto/hkdf"
 	"crypto/hmac"
+	"crypto/sha256"
+	"crypto/sha512"
 	"errors"
+	"hash"
 	"io"
 
-	"filippo.io/edwards25519"
-	"github.com/ValiantChip/GoSpake2/lib/protocol"
+	"github.com/ValiantChip/gospake2/internal/ed25519"
 )
 
 var (
@@ -17,50 +20,57 @@ var (
 	ErrVerificationFailed = errors.New("verification failed")
 )
 
-type spake2Symetric struct {
+var DEFAULT_SUITE = CipherSuite[*ed25519.Scalar, *ed25519.Point, *ed25519.Curve]{
+	Group:        new(ed25519.Curve),
+	Hash:         sha256.New,
+	PasswordHash: sha512.New,
+	Kdf:          hkdf.Key[hash.Hash],
+	Mac:          hmac.New,
+}
+
+type spake2Symetric[S Scalar[S], W Point[W, S], G Group[W, S]] struct {
+	p        protocol[S, W, G]
 	A        string
 	B        string
 	started  bool
 	finished bool
-	pw       []byte
-	w        *edwards25519.Scalar
-	pA       *edwards25519.Point
-	pB       *edwards25519.Point
+	w        S
+	pA       W
+	pB       W
 	cA       []byte
 	cB       []byte
 	rand     io.Reader
 }
 
 // represents A in the Spake2 protocol
-type Spake2A struct {
-	spake2Symetric
-	x *edwards25519.Scalar
+type Spake2A[S Scalar[S], W Point[W, S], G Group[W, S]] struct {
+	spake2Symetric[S, W, G]
+	x S
 }
 
 // Creates a new instance of A
 // pw is a slice of bytes known to both A and B
 // A and B are strings that are shared between A and B
-func NewA(pw []byte, A, B string, rand io.Reader) *Spake2A {
-	return &Spake2A{
-		spake2Symetric: newSpake2(pw, A, B, rand),
+func NewA[S Scalar[S], W Point[W, S], G Group[W, S]](pw []byte, A, B string, rand io.Reader, c CipherSuite[S, W, G]) (*Spake2A[S, W, G], error) {
+	s, err := newSpake2(pw, A, B, rand, c)
+	if err != nil {
+		return nil, err
 	}
+	return &Spake2A[S, W, G]{
+		spake2Symetric: s,
+	}, nil
 }
 
 // Starts the protocol for A and returns the byte slice representation of pA
 // If Start() has already been called on this instance ofA ErrAlreadyStarted will be returned
-func (s *Spake2A) Start() ([]byte, error) {
+func (s *Spake2A[S, W, G]) Start() ([]byte, error) {
 	if s.started {
 		return nil, ErrAlreadyStarted
 	}
-	x := protocol.RandomScalar(s.rand)
+	x := s.p.randomScalar(s.rand)
 	s.x = x
-	w, err := protocol.Generate_w(s.pw)
-	if err != nil {
-		return nil, err
-	}
-	s.w = w
 
-	pA := protocol.Generate_pA(w, x)
+	pA := s.p.generate_pA(s.w, x)
 	s.pA = pA
 
 	s.started = true
@@ -71,7 +81,7 @@ func (s *Spake2A) Start() ([]byte, error) {
 // Key is the shared secret returned from the protocol
 // Cmsg is the confirmation message to send to B for key confirmation
 // Confirmation if the message to be compared to the message recieved from B for key confirmation
-func (s *Spake2A) Finish(msg []byte) (key, cmsg []byte, err error) {
+func (s *Spake2A[S, W, G]) Finish(msg []byte) (key, cmsg []byte, err error) {
 	if s.finished {
 		return nil, nil, ErrAlreadyFinished
 	}
@@ -79,14 +89,17 @@ func (s *Spake2A) Finish(msg []byte) (key, cmsg []byte, err error) {
 	if !s.started {
 		return nil, nil, ErrNotStarted
 	}
-	pB, err := new(edwards25519.Point).SetBytes(msg)
+
+	pB, err := s.p.g.NewPoint().SetBytes(msg)
 	if err != nil {
 		return
 	}
 
-	K := protocol.AGenerateK(s.pA, pB, s.w, s.x)
+	s.pB = pB
+
+	K := s.p.aGenerateK(pB, s.w, s.x)
 	var cB []byte
-	key, cmsg, cB = protocol.GenerateSecrets(s.A, s.B, s.pA, pB, K, s.w)
+	key, cmsg, cB = s.p.generateSecrets(s.A, s.B, s.pA, pB, K, s.w)
 
 	s.cB = cB
 
@@ -97,7 +110,7 @@ func (s *Spake2A) Finish(msg []byte) (key, cmsg []byte, err error) {
 // Verifies the confirmation message from A
 // If the verification fails ErrVerificationFailed will be returned
 // If the instance has not been finished ErrNotFinished will be returned
-func (s *Spake2A) Verify(msg []byte) error {
+func (s *Spake2A[S, W, G]) Verify(msg []byte) error {
 	if !s.finished {
 		return ErrNotFinished
 	}
@@ -109,46 +122,47 @@ func (s *Spake2A) Verify(msg []byte) error {
 }
 
 // Represents B in the Spake2 protocol
-type Spake2B struct {
-	spake2Symetric
-	y *edwards25519.Scalar
+type Spake2B[S Scalar[S], W Point[W, S], G Group[W, S]] struct {
+	spake2Symetric[S, W, G]
+	y S
 }
 
 // Creates a new instance of B
 // pw is a slice of bytes known to both A and B
 // A and B are strings that are shared between A and B
-func NewB(pw []byte, A string, B string, rand io.Reader) *Spake2B {
-	return &Spake2B{
-		spake2Symetric: newSpake2(pw, A, B, rand),
+func NewB[S Scalar[S], W Point[W, S], G Group[W, S]](pw []byte, A string, B string, rand io.Reader, c CipherSuite[S, W, G]) (*Spake2B[S, W, G], error) {
+	s, err := newSpake2(pw, A, B, rand, c)
+	if err != nil {
+		return nil, err
 	}
+	return &Spake2B[S, W, G]{spake2Symetric: s}, nil
 }
 
-func newSpake2(pw []byte, A string, B string, rand io.Reader) spake2Symetric {
-	return spake2Symetric{
-		pw:   pw,
-		A:    A,
-		B:    B,
-		rand: rand,
+func newSpake2[S Scalar[S], W Point[W, S], G Group[W, S]](pw []byte, A string, B string, rand io.Reader, c CipherSuite[S, W, G]) (spake2Symetric[S, W, G], error) {
+	s := spake2Symetric[S, W, G]{}
+	s.p = newProtocol(c)
+	w, err := s.p.generate_w(pw)
+	if err != nil {
+		return s, err
 	}
+	s.w = w
+	s.A = A
+	s.B = B
+	s.rand = rand
+	return s, nil
 }
 
 // Starts the protocol for B and returns the byte slice representation of pA
 // If Start() has already been called on this instance of B ErrAlreadyStarted will be returned
-func (s *Spake2B) Start() ([]byte, error) {
+func (s *Spake2B[S, W, G]) Start() ([]byte, error) {
 	if s.started {
 		return nil, ErrAlreadyStarted
 	}
 
-	y := protocol.RandomScalar(s.rand)
+	y := s.p.randomScalar(s.rand)
 	s.y = y
-	w, err := protocol.Generate_w(s.pw)
-	if err != nil {
-		return nil, err
-	}
 
-	s.w = w
-
-	pB := protocol.Generate_pB(w, y)
+	pB := s.p.generate_pB(s.w, y)
 	s.pB = pB
 
 	s.started = true
@@ -159,7 +173,7 @@ func (s *Spake2B) Start() ([]byte, error) {
 // Key is the shared secret returned from the protocol
 // Cmsg is the confirmation message to send to A for key confirmation
 // Confirmation if the message to be compared to the message recieved from A for key confirmation
-func (s *Spake2B) Finish(msg []byte) (key, cmsg []byte, err error) {
+func (s *Spake2B[S, W, G]) Finish(msg []byte) (key, cmsg []byte, err error) {
 	if s.finished {
 		return nil, nil, ErrAlreadyFinished
 	}
@@ -168,15 +182,15 @@ func (s *Spake2B) Finish(msg []byte) (key, cmsg []byte, err error) {
 		return nil, nil, ErrNotStarted
 	}
 
-	pA, err := new(edwards25519.Point).SetBytes(msg)
+	pA, err := s.p.g.NewPoint().SetBytes(msg)
 	if err != nil {
 		return
 	}
 
-	K := protocol.BGenerateK(pA, s.pB, s.w, s.y)
+	K := s.p.bGenerateK(pA, s.w, s.y)
 
 	var cA []byte
-	key, cA, cmsg = protocol.GenerateSecrets(s.A, s.B, pA, s.pB, K, s.w)
+	key, cA, cmsg = s.p.generateSecrets(s.A, s.B, pA, s.pB, K, s.w)
 
 	s.cA = cA
 
@@ -187,7 +201,7 @@ func (s *Spake2B) Finish(msg []byte) (key, cmsg []byte, err error) {
 // Verifies the confirmation message from A
 // If the verification fails ErrVerificationFailed will be returned
 // If the instance has not been finished ErrNotFinished will be returned
-func (s *Spake2B) Verify(msg []byte) error {
+func (s *Spake2B[S, W, G]) Verify(msg []byte) error {
 	if !s.finished {
 		return ErrNotFinished
 	}
