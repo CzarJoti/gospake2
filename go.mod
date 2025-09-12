@@ -1,4 +1,4 @@
-module github.com/ValiantChip/GoSpake2
+module github.com/ValiantChip/gospake2
 
 go 1.24.6
 
