@@ -13,6 +13,7 @@ const (
 	N_HEX = "d3bfb518f44f3430f29d0c92af503865a1ed3281dc69b35dd868ba85f886c4ab"
 )
 
+// CipherSuite is a ciphersuite for the Spake2 protocol
 type CipherSuite[S Scalar[S], W Point[W, S], G Group[W, S]] struct {
 	Group        G
 	Hash         func() hash.Hash
@@ -21,6 +22,7 @@ type CipherSuite[S Scalar[S], W Point[W, S], G Group[W, S]] struct {
 	Mac          func(func() hash.Hash, []byte) hash.Hash
 }
 
+// Creates a new CipherSuite
 func NewCipherSuite[S Scalar[S], W Point[W, S], G Group[W, S]](
 	group G,
 	hash func() hash.Hash,

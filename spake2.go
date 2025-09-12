@@ -20,6 +20,8 @@ var (
 	ErrVerificationFailed = errors.New("verification failed")
 )
 
+// DEFAULT_SUITE is the default ciphersuite for use in Spake2
+// Note: sha512 is not Memory-Hard and is not recommended by rfc9382
 var DEFAULT_SUITE = CipherSuite[*ed25519.Scalar, *ed25519.Point, *ed25519.Curve]{
 	Group:        new(ed25519.Curve),
 	Hash:         sha256.New,
