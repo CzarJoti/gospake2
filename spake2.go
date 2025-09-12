@@ -30,6 +30,12 @@ var DEFAULT_SUITE = CipherSuite[*ed25519.Scalar, *ed25519.Point, *ed25519.Curve]
 	Mac:          hmac.New,
 }
 
+type Spake2Handler interface {
+	Start() ([]byte, error)
+	Finish(msg []byte) ([]byte, []byte, error)
+	Verify(msg []byte) error
+}
+
 type spake2Symetric[S Scalar[S], W Point[W, S], G Group[W, S]] struct {
 	p        protocol[S, W, G]
 	A        string
