@@ -3,14 +3,8 @@ package gospake2
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/hex"
 	"hash"
 	"io"
-)
-
-const (
-	M_HEX = "d048032c6ea0b6d697ddc2e86bda85a33adac920f1bf18e1b0c6d166a5cecdaf"
-	N_HEX = "d3bfb518f44f3430f29d0c92af503865a1ed3281dc69b35dd868ba85f886c4ab"
 )
 
 // CipherSuite is a ciphersuite for the Spake2 protocol
@@ -57,11 +51,9 @@ func newProtocol[S Scalar[S], W Point[W, S], G Group[W, S]](c CipherSuite[S, W, 
 	p.pwdhsh = c.PasswordHash
 	p.kdf = c.Kdf
 	p.mac = c.Mac
-	mpnt, _ := hex.DecodeString(M_HEX)
-	npnt, _ := hex.DecodeString(N_HEX)
 
-	M, _ := p.g.NewPoint().SetBytes(mpnt)
-	N, _ := p.g.NewPoint().SetBytes(npnt)
+	M := p.g.NewMPoint()
+	N := p.g.NewNPoint()
 	P := p.g.NewGeneratorPoint()
 
 	p.M = M
