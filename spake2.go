@@ -2,7 +2,6 @@ package gospake2
 
 import (
 	"crypto/hkdf"
-	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/sha512"
 	"crypto/subtle"
@@ -11,6 +10,7 @@ import (
 	"io"
 
 	"github.com/ValiantChip/gospake2/internal/ed25519"
+	"github.com/ValiantChip/gospake2/internal/hmac"
 )
 
 var (
@@ -28,7 +28,7 @@ var DEFAULT_SUITE = CipherSuite[*ed25519.Point, *ed25519.Scalar, *ed25519.Curve]
 	Hash:         sha256.New,
 	PasswordHash: sha512.New,
 	Kdf:          hkdf.Key[hash.Hash],
-	Mac:          hmac.New,
+	Mac:          hmac.MAC,
 }
 
 // Represents an object that can handle the Spake2 protocol
@@ -216,7 +216,7 @@ func (s *Spake2B[W, S, G]) Verify(msg []byte) error {
 		return ErrNotFinished
 	}
 
-	if b := hmac.Equal(s.cA, msg); !b {
+	if b := subtle.ConstantTimeCompare(s.cA, msg); !(b == 1) {
 		return ErrVerificationFailed
 	}
 	return nil

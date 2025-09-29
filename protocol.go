@@ -12,7 +12,7 @@ type protocol[W Point[W, S], S Scalar[S], G Group[W, S]] struct {
 	hsh    func() hash.Hash
 	pwdhsh func() hash.Hash
 	kdf    func(func() hash.Hash, []byte, []byte, string, int) ([]byte, error)
-	mac    func(func() hash.Hash, []byte) hash.Hash
+	mac    func(h func() hash.Hash, key, msg []byte) []byte
 	M      W
 	N      W
 	P      W
@@ -112,8 +112,8 @@ func (p *protocol[W, S, G]) generateSecrets(A, B string, pA, pB, K W, w S) (Ke, 
 	KcA := KcPart[:16]
 	KcB := KcPart[16:]
 
-	cA = p.mac(p.hsh, KcA).Sum(nil)
-	cB = p.mac(p.hsh, KcB).Sum(nil)
+	cA = p.mac(p.hsh, KcA, TT.Bytes())
+	cB = p.mac(p.hsh, KcB, TT.Bytes())
 
 	return
 }
