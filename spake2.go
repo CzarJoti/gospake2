@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/sha512"
+	"crypto/subtle"
 	"errors"
 	"hash"
 	"io"
@@ -124,7 +125,7 @@ func (s *Spake2A[S, W, G]) Verify(msg []byte) error {
 		return ErrNotFinished
 	}
 
-	if b := hmac.Equal(s.cB, msg); !b {
+	if b := subtle.ConstantTimeCompare(s.cB, msg); !(b == 1) {
 		return ErrVerificationFailed
 	}
 	return nil
