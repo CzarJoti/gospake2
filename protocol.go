@@ -7,7 +7,7 @@ import (
 	"io"
 )
 
-type protocol[S Scalar[S], W Point[W, S], G Group[W, S]] struct {
+type protocol[W Point[W, S], S Scalar[S], G Group[W, S]] struct {
 	g      G
 	hsh    func() hash.Hash
 	pwdhsh func() hash.Hash
@@ -18,8 +18,8 @@ type protocol[S Scalar[S], W Point[W, S], G Group[W, S]] struct {
 	P      W
 }
 
-func newProtocol[S Scalar[S], W Point[W, S], G Group[W, S]](c CipherSuite[S, W, G]) protocol[S, W, G] {
-	p := protocol[S, W, G]{}
+func newProtocol[W Point[W, S], S Scalar[S], G Group[W, S]](c CipherSuite[W, S, G]) protocol[W, S, G] {
+	p := protocol[W, S, G]{}
 	p.g = c.Group
 	p.hsh = c.Hash
 	p.pwdhsh = c.PasswordHash
@@ -36,7 +36,7 @@ func newProtocol[S Scalar[S], W Point[W, S], G Group[W, S]](c CipherSuite[S, W, 
 	return p
 }
 
-func (p *protocol[S, W, G]) generate_w(pw []byte) (w S, err error) {
+func (p *protocol[W, S, G]) generate_w(pw []byte) (w S, err error) {
 	h := p.pwdhsh()
 	_, err = h.Write(pw)
 	if err != nil {
@@ -48,7 +48,7 @@ func (p *protocol[S, W, G]) generate_w(pw []byte) (w S, err error) {
 	return
 }
 
-func (p *protocol[S, W, G]) generateK(b W, w, t S, Q W) (K W) {
+func (p *protocol[W, S, G]) generateK(b W, w, t S, Q W) (K W) {
 	K = p.g.NewPoint()
 
 	temp := p.g.NewPoint()
@@ -59,7 +59,7 @@ func (p *protocol[S, W, G]) generateK(b W, w, t S, Q W) (K W) {
 	return
 }
 
-func (p *protocol[S, W, G]) generate_pA(w, x S) (pA W) {
+func (p *protocol[W, S, G]) generate_pA(w, x S) (pA W) {
 	X := p.g.NewPoint()
 	X = X.ScalarMult(x, p.P)
 
@@ -69,7 +69,7 @@ func (p *protocol[S, W, G]) generate_pA(w, x S) (pA W) {
 	return
 }
 
-func (p *protocol[S, W, G]) generate_pB(w, y S) (pB W) {
+func (p *protocol[W, S, G]) generate_pB(w, y S) (pB W) {
 	Y := p.g.NewPoint()
 	Y = Y.ScalarMult(y, p.P)
 
@@ -79,17 +79,17 @@ func (p *protocol[S, W, G]) generate_pB(w, y S) (pB W) {
 	return
 }
 
-func (p *protocol[S, W, G]) aGenerateK(pB W, w, x S) (K W) {
+func (p *protocol[W, S, G]) aGenerateK(pB W, w, x S) (K W) {
 	K = p.generateK(pB, w, x, p.N)
 	return
 }
 
-func (p *protocol[S, W, G]) bGenerateK(pA W, w, y S) (K W) {
+func (p *protocol[W, S, G]) bGenerateK(pA W, w, y S) (K W) {
 	K = p.generateK(pA, w, y, p.M)
 	return
 }
 
-func (p *protocol[S, W, G]) generateSecrets(A, B string, pA, pB, K W, w S) (Ke, cA, cB []byte) {
+func (p *protocol[W, S, G]) generateSecrets(A, B string, pA, pB, K W, w S) (Ke, cA, cB []byte) {
 	TT := new(bytes.Buffer)
 	writeVal(TT, []byte(A))
 	writeVal(TT, []byte(B))
@@ -118,7 +118,7 @@ func (p *protocol[S, W, G]) generateSecrets(A, B string, pA, pB, K W, w S) (Ke, 
 	return
 }
 
-func (p *protocol[S, W, G]) randomScalar(r io.Reader) S {
+func (p *protocol[W, S, G]) randomScalar(r io.Reader) S {
 	b := make([]byte, 64)
 	r.Read(b)
 	s, _ := p.g.NewScalar().SetUniformBytes(b)

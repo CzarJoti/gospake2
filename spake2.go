@@ -23,7 +23,7 @@ var (
 
 // DEFAULT_SUITE is the default ciphersuite for use in Spake2
 // Note: sha512 is not Memory-Hard and is not recommended by rfc9382
-var DEFAULT_SUITE = CipherSuite[*ed25519.Scalar, *ed25519.Point, *ed25519.Curve]{
+var DEFAULT_SUITE = CipherSuite[*ed25519.Point, *ed25519.Scalar, *ed25519.Curve]{
 	Group:        new(ed25519.Curve),
 	Hash:         sha256.New,
 	PasswordHash: sha512.New,
@@ -38,8 +38,8 @@ type Spake2Handler interface {
 	Verify(msg []byte) error
 }
 
-type spake2Symetric[S Scalar[S], W Point[W, S], G Group[W, S]] struct {
-	p        protocol[S, W, G]
+type spake2Symetric[W Point[W, S], S Scalar[S], G Group[W, S]] struct {
+	p        protocol[W, S, G]
 	A        string
 	B        string
 	started  bool
@@ -53,27 +53,27 @@ type spake2Symetric[S Scalar[S], W Point[W, S], G Group[W, S]] struct {
 }
 
 // represents A in the Spake2 protocol
-type Spake2A[S Scalar[S], W Point[W, S], G Group[W, S]] struct {
-	spake2Symetric[S, W, G]
+type Spake2A[W Point[W, S], S Scalar[S], G Group[W, S]] struct {
+	spake2Symetric[W, S, G]
 	x S
 }
 
 // Creates a new instance of A
 // pw is a slice of bytes known to both A and B
 // A and B are strings that are shared between A and B
-func NewA[S Scalar[S], W Point[W, S], G Group[W, S]](pw []byte, A, B string, rand io.Reader, c CipherSuite[S, W, G]) (*Spake2A[S, W, G], error) {
+func NewA[W Point[W, S], S Scalar[S], G Group[W, S]](pw []byte, A, B string, rand io.Reader, c CipherSuite[W, S, G]) (*Spake2A[W, S, G], error) {
 	s, err := newSpake2(pw, A, B, rand, c)
 	if err != nil {
 		return nil, err
 	}
-	return &Spake2A[S, W, G]{
+	return &Spake2A[W, S, G]{
 		spake2Symetric: s,
 	}, nil
 }
 
 // Starts the protocol for A and returns the byte slice representation of pA
 // If Start() has already been called on this instance ofA ErrAlreadyStarted will be returned
-func (s *Spake2A[S, W, G]) Start() ([]byte, error) {
+func (s *Spake2A[W, S, G]) Start() ([]byte, error) {
 	if s.started {
 		return nil, ErrAlreadyStarted
 	}
@@ -91,7 +91,7 @@ func (s *Spake2A[S, W, G]) Start() ([]byte, error) {
 // Key is the shared secret returned from the protocol
 // Cmsg is the confirmation message to send to B for key confirmation
 // Confirmation if the message to be compared to the message recieved from B for key confirmation
-func (s *Spake2A[S, W, G]) Finish(msg []byte) (key, cmsg []byte, err error) {
+func (s *Spake2A[W, S, G]) Finish(msg []byte) (key, cmsg []byte, err error) {
 	if s.finished {
 		return nil, nil, ErrAlreadyFinished
 	}
@@ -120,7 +120,7 @@ func (s *Spake2A[S, W, G]) Finish(msg []byte) (key, cmsg []byte, err error) {
 // Verifies the confirmation message from A
 // If the verification fails ErrVerificationFailed will be returned
 // If the instance has not been finished ErrNotFinished will be returned
-func (s *Spake2A[S, W, G]) Verify(msg []byte) error {
+func (s *Spake2A[W, S, G]) Verify(msg []byte) error {
 	if !s.finished {
 		return ErrNotFinished
 	}
@@ -132,24 +132,24 @@ func (s *Spake2A[S, W, G]) Verify(msg []byte) error {
 }
 
 // Represents B in the Spake2 protocol
-type Spake2B[S Scalar[S], W Point[W, S], G Group[W, S]] struct {
-	spake2Symetric[S, W, G]
+type Spake2B[W Point[W, S], S Scalar[S], G Group[W, S]] struct {
+	spake2Symetric[W, S, G]
 	y S
 }
 
 // Creates a new instance of B
 // pw is a slice of bytes known to both A and B
 // A and B are strings that are shared between A and B
-func NewB[S Scalar[S], W Point[W, S], G Group[W, S]](pw []byte, A string, B string, rand io.Reader, c CipherSuite[S, W, G]) (*Spake2B[S, W, G], error) {
+func NewB[S Scalar[S], W Point[W, S], G Group[W, S]](pw []byte, A string, B string, rand io.Reader, c CipherSuite[W, S, G]) (*Spake2B[W, S, G], error) {
 	s, err := newSpake2(pw, A, B, rand, c)
 	if err != nil {
 		return nil, err
 	}
-	return &Spake2B[S, W, G]{spake2Symetric: s}, nil
+	return &Spake2B[W, S, G]{spake2Symetric: s}, nil
 }
 
-func newSpake2[S Scalar[S], W Point[W, S], G Group[W, S]](pw []byte, A string, B string, rand io.Reader, c CipherSuite[S, W, G]) (spake2Symetric[S, W, G], error) {
-	s := spake2Symetric[S, W, G]{}
+func newSpake2[S Scalar[S], W Point[W, S], G Group[W, S]](pw []byte, A string, B string, rand io.Reader, c CipherSuite[W, S, G]) (spake2Symetric[W, S, G], error) {
+	s := spake2Symetric[W, S, G]{}
 	s.p = newProtocol(c)
 	w, err := s.p.generate_w(pw)
 	if err != nil {
@@ -164,7 +164,7 @@ func newSpake2[S Scalar[S], W Point[W, S], G Group[W, S]](pw []byte, A string, B
 
 // Starts the protocol for B and returns the byte slice representation of pA
 // If Start() has already been called on this instance of B ErrAlreadyStarted will be returned
-func (s *Spake2B[S, W, G]) Start() ([]byte, error) {
+func (s *Spake2B[W, S, G]) Start() ([]byte, error) {
 	if s.started {
 		return nil, ErrAlreadyStarted
 	}
@@ -183,7 +183,7 @@ func (s *Spake2B[S, W, G]) Start() ([]byte, error) {
 // Key is the shared secret returned from the protocol
 // Cmsg is the confirmation message to send to A for key confirmation
 // Confirmation if the message to be compared to the message recieved from A for key confirmation
-func (s *Spake2B[S, W, G]) Finish(msg []byte) (key, cmsg []byte, err error) {
+func (s *Spake2B[W, S, G]) Finish(msg []byte) (key, cmsg []byte, err error) {
 	if s.finished {
 		return nil, nil, ErrAlreadyFinished
 	}
@@ -211,7 +211,7 @@ func (s *Spake2B[S, W, G]) Finish(msg []byte) (key, cmsg []byte, err error) {
 // Verifies the confirmation message from A
 // If the verification fails ErrVerificationFailed will be returned
 // If the instance has not been finished ErrNotFinished will be returned
-func (s *Spake2B[S, W, G]) Verify(msg []byte) error {
+func (s *Spake2B[W, S, G]) Verify(msg []byte) error {
 	if !s.finished {
 		return ErrNotFinished
 	}
