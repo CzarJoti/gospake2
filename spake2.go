@@ -38,7 +38,7 @@ type Spake2Handler interface {
 	Verify(msg []byte) error
 }
 
-type spake2Symetric[W Point[W, S], S Scalar[S], G Group[W, S]] struct {
+type spake2Base[W Point[W, S], S Scalar[S], G Group[W, S]] struct {
 	p        protocol[W, S, G]
 	A        string
 	B        string
@@ -54,7 +54,7 @@ type spake2Symetric[W Point[W, S], S Scalar[S], G Group[W, S]] struct {
 
 // represents A in the Spake2 protocol
 type Spake2A[W Point[W, S], S Scalar[S], G Group[W, S]] struct {
-	spake2Symetric[W, S, G]
+	spake2Base[W, S, G]
 	x S
 }
 
@@ -67,7 +67,7 @@ func NewA[W Point[W, S], S Scalar[S], G Group[W, S]](pw []byte, A, B string, ran
 		return nil, err
 	}
 	return &Spake2A[W, S, G]{
-		spake2Symetric: s,
+		spake2Base: s,
 	}, nil
 }
 
@@ -133,7 +133,7 @@ func (s *Spake2A[W, S, G]) Verify(msg []byte) error {
 
 // Represents B in the Spake2 protocol
 type Spake2B[W Point[W, S], S Scalar[S], G Group[W, S]] struct {
-	spake2Symetric[W, S, G]
+	spake2Base[W, S, G]
 	y S
 }
 
@@ -145,11 +145,11 @@ func NewB[S Scalar[S], W Point[W, S], G Group[W, S]](pw []byte, A string, B stri
 	if err != nil {
 		return nil, err
 	}
-	return &Spake2B[W, S, G]{spake2Symetric: s}, nil
+	return &Spake2B[W, S, G]{spake2Base: s}, nil
 }
 
-func newSpake2[S Scalar[S], W Point[W, S], G Group[W, S]](pw []byte, A string, B string, rand io.Reader, c CipherSuite[W, S, G]) (spake2Symetric[W, S, G], error) {
-	s := spake2Symetric[W, S, G]{}
+func newSpake2[S Scalar[S], W Point[W, S], G Group[W, S]](pw []byte, A string, B string, rand io.Reader, c CipherSuite[W, S, G]) (spake2Base[W, S, G], error) {
+	s := spake2Base[W, S, G]{}
 	s.p = newProtocol(c)
 	w, err := s.p.generate_w(pw)
 	if err != nil {
