@@ -9,8 +9,8 @@ import (
 	"hash"
 	"io"
 
-	"github.com/ValiantChip/gospake2/internal/ed25519"
-	"github.com/ValiantChip/gospake2/internal/hmac"
+	"github.com/CzarJoti/gospake2/internal/ed25519"
+	"github.com/CzarJoti/gospake2/internal/hmac"
 )
 
 var (
